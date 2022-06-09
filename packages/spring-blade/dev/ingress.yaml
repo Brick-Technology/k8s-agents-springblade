@@ -1,0 +1,147 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ui-admin
+spec:
+  rules:
+  - http:
+      paths:
+      - pathType: Prefix
+        path: "/dev/admin"
+        backend:
+          service:
+            name: ui-admin-headless
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nacos-headless
+spec:
+  rules:
+  - http:
+      paths:
+      - pathType: Prefix
+        path: "/nacos"
+        backend:
+          service:
+            name: nacos-headless
+            port:
+              number: 8848
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-nacos
+  labels:
+    name: mysql-nacos
+spec:
+  type: NodePort 
+  ports:
+  - port: 3306
+    targetPort: 3306
+    nodePort: 30000
+  selector:
+    app: mysql-nacos
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    name: mysql
+spec:
+  type: NodePort 
+  ports:
+  - port: 3306
+    targetPort: 3306
+    nodePort: 30001
+  selector:
+    app: mysql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinel
+  labels:
+    name: sentinel
+spec:
+  type: NodePort 
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30002
+  selector:
+    app: sentinel
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nacos
+  labels:
+    name: nacos
+spec:
+  type: NodePort 
+  ports:
+  - port: 8848
+    targetPort: 8848
+    nodePort: 30003
+  - port: 9848
+    targetPort: 9848
+    nodePort: 31003
+  - port: 9849
+    targetPort: 9849
+    nodePort: 31004
+  selector:
+    name: nacos
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: {}
+  labels:
+    app: redis
+  name:  redis
+spec:
+  type: NodePort 
+  ports:
+  - port: 6379
+    targetPort: 6379
+    nodePort: 30004
+  selector:
+    app: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: {}
+  labels:
+    app: blade-gateway-nodeport
+  name:  blade-gateway-nodeport
+spec:
+  type: NodePort 
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 31001
+  selector:
+    app: blade-gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: {}
+  labels:
+    app: blade-ui-admin-nodeport
+  name:  blade-ui-admin-nodeport
+spec:
+  type: NodePort 
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 31002
+  selector:
+    app: blade-ui-admin
+---

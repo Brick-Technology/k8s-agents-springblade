@@ -1,0 +1,67 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-nacos-headless
+  labels:
+    app: mysql-nacos-headless
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - port: 3306
+      targetPort: 3306
+  selector:
+    app: mysql-nacos
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-nacos-pv-claim
+  labels:
+    app: mysql-nacos
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: mysql-nacos
+  labels:
+    app: mysql-nacos
+spec:
+  replicas: 1
+  selector:
+    app: mysql-nacos
+  template:
+    metadata:
+      labels:
+        app: mysql-nacos
+    spec:
+      containers:
+      - name: mysql-nacos
+        image: 192.168.2.29:8443/springblade/nacos-db:2bd89d87
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "Db2@4jls2"
+        - name: MYSQL_DATABASE
+          value: "nacos_devtest"
+        - name: MYSQL_USER
+          value: "nacos"
+        - name: MYSQL_PASSWORD
+          value: "nacos"
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-nacos-pv-claim
+---
+

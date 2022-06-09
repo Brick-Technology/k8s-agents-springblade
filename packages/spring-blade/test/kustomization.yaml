@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: springblade-test
+namePrefix: test-
+commonLabels:
+  env: test
+resources:
+- namespace.yaml
+- blade-ui-admin-config-configmap.yaml
+- blade-config-configmap.yaml
+- nacos-cm-configmap.yaml
+- ../base
+- ingress.yaml
+images:
+- name: 192.168.2.29:8443/springblade/
+  newTag: 6430d864
+- name: 192.168.2.29:8443/springblade/blade-auth
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/blade-gateway
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/blade-ops/blade-admin
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/blade-ops/blade-develop
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/blade-ops/blade-report
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/blade-ops/blade-resource
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/blade-ops/blade-swagger
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/blade-service/blade-desk
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/blade-service/blade-log
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/blade-service/blade-system
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/blade-service/blade-user
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/nacos-db
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/saber-db
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/sentinel
+  newTag: 01b04084
+- name: 192.168.2.29:8443/springblade/ui/admin
+  newTag: 01b04084

@@ -1,0 +1,57 @@
+.image-update:unpack:
+  image:
+    name: ${CI_REGISTRY_PROXY}arleif24/curl-zip-jq:latest
+    entrypoint: [""]
+  script:
+  - cat $TRIGGER_PAYLOAD
+  - cat $TRIGGER_PAYLOAD | jq -r '.variables | to_entries[] | .key + "=\"" + (.value|tostring) + "\""' > "update_image_data.env"
+  - cat $TRIGGER_PAYLOAD | jq -r 'to_entries[] | .key + "=\"" + (.value|tostring) + "\""' >> "update_image_data.env"
+  artifacts:
+    untracked: false
+    expire_in: 1 days
+    paths:
+      - "update_image_data.env"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
+
+.image-update:update:
+  image: 
+    name: ${CI_REGISTRY_PROXY}line/kubectl-kustomize:1.24.0-4.5.5
+    entrypoint: [""]
+  script:
+  - |
+    if [ -z "$PACKAGE_PATH" ]; then
+      echo "Set PACKAGE_PATH where you extend `.image-update:update`. It's required in the job."
+      exit 1
+    fi
+  - cd "${PACKAGE_PATH}"
+  - |
+    function set_image
+    {
+      ifs_old=$IFS
+      IFS=$','
+      for i in $(echo "${1}")
+      do
+      echo "${i}"
+      kustomize edit set image "${i}"
+      done  
+    }
+  - set_image "${IMAGE_REF}"
+  artifacts:
+    untracked: false
+    expire_in: 1 days
+    paths:
+      - $PACKAGE_PATH
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
+
+.image-update:commit:
+  extends: .git:push
+  variables:
+    COMMIT_MESSAGE: "Updated supermind image"
+    SKIP_CI: 0
+  script:
+  - rm -rf "${CI_COMMIT_SHA}/packages"
+  - mv packages "${CI_COMMIT_SHA}/"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "pipeline"'

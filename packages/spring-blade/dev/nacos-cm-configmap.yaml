@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nacos-cm
+data:
+  mysql.host: "dev-mysql-nacos-headless"
+  mysql.port: "3306"
+  mysql.db.name: "nacos_devtest"
+  mysql.user: "nacos"
+  mysql.password: "nacos"
+  mysql.db.param: "characterEncoding=utf8&connectTimeout=10000&socketTimeout=30000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=UTC"
+  nacos.servers: "dev-nacos-0.dev-nacos-headless.springblade-dev.svc.cluster.local dev-nacos-1.dev-nacos-headless.springblade-dev.svc.cluster.local"
+---

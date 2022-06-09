@@ -1,0 +1,78 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinel-headless
+  labels:
+    app: sentinel-headless
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - port: 8080
+      name: web
+      targetPort: 8080
+  selector:
+    app: sentinel
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sentinel
+spec:
+  serviceName: sentinel-headless
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: sentinel
+      annotations:
+        pod.alpha.kubernetes.io/initialized: "true"
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "app"
+                    operator: In
+                    values:
+                      - sentinel
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: sentinel
+          imagePullPolicy: Always
+          image: 192.168.2.29:8443/springblade/sentinel:2bd89d87
+          ports:
+            - containerPort: 8080
+              name: web
+          livenessProbe:
+            httpGet:
+                path: /
+                port: 8080
+                scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+                path: /
+                port: 8080
+                scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+                path: /
+                port: 8080
+                scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 20
+  selector:
+    matchLabels:
+      app: sentinel

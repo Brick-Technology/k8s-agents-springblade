@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- blade-admin-deployment.yaml
+- blade-auth-deployment.yaml
+- blade-desk-deployment.yaml
+- blade-develop-deployment.yaml
+- blade-log-deployment.yaml
+- blade-report-deployment.yaml
+- blade-resource-deployment.yaml
+- blade-swagger-deployment.yaml
+- blade-system-deployment.yaml
+- blade-user-deployment.yaml
+- blade-gateway-deployment.yaml
+- blade-ui-admin-deployment.yaml

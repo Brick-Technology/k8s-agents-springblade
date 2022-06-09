@@ -1,0 +1,1491 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    env: dev
+  name: springblade-dev
+---
+apiVersion: v1
+data:
+  NACOS_SERVER_ADDR: dev-nacos-headless:8848
+  PROFILE: dev
+  SENTINEL_DASHBOARD_ADDR: dev-sentinel-headless:8080
+  TZ: Asia/Shanghai
+kind: ConfigMap
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-config
+  namespace: springblade-dev
+---
+apiVersion: v1
+data:
+  mysql.db.name: nacos_devtest
+  mysql.db.param: characterEncoding=utf8&connectTimeout=10000&socketTimeout=30000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=UTC
+  mysql.host: dev-mysql-nacos-headless
+  mysql.password: nacos
+  mysql.port: "3306"
+  mysql.user: nacos
+  nacos.servers: dev-nacos-0.dev-nacos-headless.springblade-dev.svc.cluster.local
+    dev-nacos-1.dev-nacos-headless.springblade-dev.svc.cluster.local
+kind: ConfigMap
+metadata:
+  labels:
+    env: dev
+  name: dev-nacos-cm
+  namespace: springblade-dev
+---
+apiVersion: v1
+data:
+  redis-config: ""
+kind: ConfigMap
+metadata:
+  labels:
+    env: dev
+  name: dev-redis-config
+  namespace: springblade-dev
+---
+apiVersion: v1
+data:
+  nginx.conf: |
+    user  root;
+    worker_processes  1;
+
+    error_log  /var/log/nginx/error.log warn;
+    pid        /var/run/nginx.pid;
+
+
+    events {
+        worker_connections  1024;
+    }
+
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+
+        sendfile        on;
+        #tcp_nopush     on;
+
+        keepalive_timeout  65;
+
+        #gzip  on;
+
+        #include /etc/nginx/conf.d/*.conf;
+
+        upstream gateway {
+            server dev-gateway-headless;
+        }
+
+
+        server {
+          listen       80;
+          server_name  web;
+          root         /usr/share/nginx/html;
+
+          location / {
+
+          }
+
+          location ^~/api {
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_buffering off;
+              rewrite ^/api/(.*)$ /$1 break;
+              proxy_pass http://gateway;
+          }
+        }
+
+
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    env: dev
+  name: dev-ui-admin-nginx-config
+  namespace: springblade-dev
+---
+apiVersion: v1
+data:
+  password: RGIyQDRqbHMy
+kind: Secret
+metadata:
+  labels:
+    env: dev
+  name: dev-mysql-pass-cd7h4m479b
+  namespace: springblade-dev
+type: Opaque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: blade-gateway-nodeport
+    env: dev
+  name: dev-blade-gateway-nodeport
+  namespace: springblade-dev
+spec:
+  ports:
+  - nodePort: 31001
+    port: 80
+    targetPort: 80
+  selector:
+    app: blade-gateway
+    env: dev
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: blade-ui-admin-nodeport
+    env: dev
+  name: dev-blade-ui-admin-nodeport
+  namespace: springblade-dev
+spec:
+  ports:
+  - nodePort: 31002
+    port: 80
+    targetPort: 80
+  selector:
+    app: blade-ui-admin
+    env: dev
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: gateway-headless
+    env: dev
+  name: dev-gateway-headless
+  namespace: springblade-dev
+spec:
+  clusterIP: None
+  ports:
+  - name: gateway
+    port: 80
+    targetPort: 80
+  selector:
+    app: blade-gateway
+    env: dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    env: dev
+    name: mysql
+  name: dev-mysql
+  namespace: springblade-dev
+spec:
+  ports:
+  - nodePort: 30001
+    port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql
+    env: dev
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: mysql-headless
+    env: dev
+  name: dev-mysql-headless
+  namespace: springblade-dev
+spec:
+  clusterIP: None
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql
+    env: dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    env: dev
+    name: mysql-nacos
+  name: dev-mysql-nacos
+  namespace: springblade-dev
+spec:
+  ports:
+  - nodePort: 30000
+    port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql-nacos
+    env: dev
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: mysql-nacos-headless
+    env: dev
+  name: dev-mysql-nacos-headless
+  namespace: springblade-dev
+spec:
+  clusterIP: None
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql-nacos
+    env: dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    env: dev
+    name: nacos
+  name: dev-nacos
+  namespace: springblade-dev
+spec:
+  ports:
+  - nodePort: 30003
+    port: 8848
+    targetPort: 8848
+  - nodePort: 31003
+    port: 9848
+    targetPort: 9848
+  - nodePort: 31004
+    port: 9849
+    targetPort: 9849
+  selector:
+    env: dev
+    name: nacos
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nacos-headless
+    env: dev
+  name: dev-nacos-headless
+  namespace: springblade-dev
+spec:
+  clusterIP: None
+  ports:
+  - name: server
+    port: 8848
+    targetPort: 8848
+  - name: client-rpc
+    port: 9848
+    targetPort: 9848
+  - name: raft-rpc
+    port: 9849
+    targetPort: 9849
+  - name: old-raft-rpc
+    port: 7848
+    targetPort: 7848
+  selector:
+    app: nacos
+    env: dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: redis
+    env: dev
+  name: dev-redis
+  namespace: springblade-dev
+spec:
+  ports:
+  - nodePort: 30004
+    port: 6379
+    targetPort: 6379
+  selector:
+    app: redis
+    env: dev
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: redis-headless
+    env: dev
+  name: dev-redis-headless
+  namespace: springblade-dev
+spec:
+  clusterIP: None
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app: redis
+    env: dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    env: dev
+    name: sentinel
+  name: dev-sentinel
+  namespace: springblade-dev
+spec:
+  ports:
+  - nodePort: 30002
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: sentinel
+    env: dev
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: sentinel-headless
+    env: dev
+  name: dev-sentinel-headless
+  namespace: springblade-dev
+spec:
+  clusterIP: None
+  ports:
+  - name: web
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: sentinel
+    env: dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ui-admin-headless
+    env: dev
+  name: dev-ui-admin-headless
+  namespace: springblade-dev
+spec:
+  clusterIP: None
+  ports:
+  - name: ui-admin
+    port: 80
+    targetPort: 80
+  selector:
+    app: blade-ui-admin
+    env: dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: mysql-nacos
+    env: dev
+  name: dev-mysql-nacos-pv-claim
+  namespace: springblade-dev
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: mysql
+    env: dev
+  name: dev-mysql-pv-claim
+  namespace: springblade-dev
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-admin
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-admin
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-admin
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-ops/blade-admin:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-admin
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-auth
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-auth
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-auth
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-auth:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-auth
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-desk
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-desk
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-desk
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-service/blade-desk:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-desk
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-develop
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-develop
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-develop
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-ops/blade-develop:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-develop
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-gateway
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-gateway
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-gateway
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-gateway:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-gateway
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-log
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-log
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-log
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-service/blade-log:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-log
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-report
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-report
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-report
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-ops/blade-report:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-report
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-resource
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-resource
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-resource
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-ops/blade-resource:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-resource
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-swagger
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-swagger
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-swagger
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-ops/blade-swagger:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-swagger
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-system
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-system
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-system
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-service/blade-system:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-system
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-ui-admin
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-ui-admin
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-ui-admin
+        env: dev
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/ui/admin:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-ui-admin
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /etc/nginx/nginx.conf
+          name: ui-admin-nginx-config
+          subPath: nginx.conf
+      volumes:
+      - configMap:
+          items:
+          - key: nginx.conf
+            path: nginx.conf
+          name: dev-ui-admin-nginx-config
+        name: ui-admin-nginx-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    env: dev
+  name: dev-blade-user
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: blade-user
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: blade-user
+        env: dev
+    spec:
+      containers:
+      - args:
+        - --spring.profiles.active=${PROFILE}
+        - --spring.cloud.nacos.config.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.nacos.discovery.server-addr=${NACOS_SERVER_ADDR}
+        - --spring.cloud.sentinel.transport.dashboard=${SENTINEL_DASHBOARD_ADDR}
+        - --server.port=80
+        env:
+        - name: NACOS_REPLICAS
+          value: "1"
+        envFrom:
+        - configMapRef:
+            name: dev-blade-config
+        image: 192.168.2.29:8443/springblade/blade-service/blade-user:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: blade-user
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /actuator/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mysql
+    env: dev
+  name: dev-mysql
+  namespace: springblade-dev
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+      env: dev
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+        env: dev
+    spec:
+      containers:
+      - env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: dev-mysql-pass-cd7h4m479b
+        image: 192.168.2.29:8443/springblade/saber-db:dc9065ca
+        name: mysql
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysql-persistent-storage
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: dev-mysql-pv-claim
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    env: dev
+  name: dev-nacos
+  namespace: springblade-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nacos
+      env: dev
+  serviceName: dev-nacos-headless
+  template:
+    metadata:
+      annotations:
+        pod.alpha.kubernetes.io/initialized: "true"
+      labels:
+        app: nacos
+        env: dev
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - nacos
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - env:
+        - name: NACOS_REPLICAS
+          value: "2"
+        - name: MYSQL_SERVICE_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: mysql.host
+              name: dev-nacos-cm
+        - name: MYSQL_SERVICE_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: mysql.port
+              name: dev-nacos-cm
+        - name: MYSQL_SERVICE_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: mysql.db.name
+              name: dev-nacos-cm
+        - name: MYSQL_SERVICE_USER
+          valueFrom:
+            configMapKeyRef:
+              key: mysql.user
+              name: dev-nacos-cm
+        - name: MYSQL_SERVICE_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              key: mysql.password
+              name: dev-nacos-cm
+        - name: MYSQL_SERVICE_DB_PARAM
+          valueFrom:
+            configMapKeyRef:
+              key: mysql.db.param
+              name: dev-nacos-cm
+        - name: NACOS_SERVER_PORT
+          value: "8848"
+        - name: NACOS_APPLICATION_PORT
+          value: "8848"
+        - name: PREFER_HOST_MODE
+          value: hostname
+        - name: NACOS_SERVERS
+          valueFrom:
+            configMapKeyRef:
+              key: nacos.servers
+              name: dev-nacos-cm
+        - name: SPRING_DATASOURCE_PLATFORM
+          value: mysql
+        image: 192.168.2.29:8443/proxy_cache/nacos/nacos-server:v2.1.0
+        imagePullPolicy: Always
+        name: k8snacos
+        ports:
+        - containerPort: 8848
+          name: client
+        - containerPort: 9848
+          name: client-rpc
+        - containerPort: 9849
+          name: raft-rpc
+        - containerPort: 7848
+          name: old-raft-rpc
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    env: dev
+  name: dev-sentinel
+  namespace: springblade-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentinel
+      env: dev
+  serviceName: dev-sentinel-headless
+  template:
+    metadata:
+      annotations:
+        pod.alpha.kubernetes.io/initialized: "true"
+      labels:
+        app: sentinel
+        env: dev
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - sentinel
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - image: 192.168.2.29:8443/springblade/sentinel:dc9065ca
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: sentinel
+        ports:
+        - containerPort: 8080
+          name: web
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        startupProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    env: dev
+  name: dev-nacos-headless
+  namespace: springblade-dev
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: dev-nacos-headless
+            port:
+              number: 8848
+        path: /nacos
+        pathType: Prefix
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    env: dev
+  name: dev-ui-admin
+  namespace: springblade-dev
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: dev-ui-admin-headless
+            port:
+              number: 80
+        path: /dev/admin
+        pathType: Prefix
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: redis
+    env: dev
+  name: dev-redis
+  namespace: springblade-dev
+spec:
+  containers:
+  - command:
+    - redis-server
+    - /redis-master/redis.conf
+    env:
+    - name: MASTER
+      value: "true"
+    - name: nacos.naming.data.warmup
+      value: "false"
+    image: 192.168.2.29:8443/proxy_cache/library/redis:7.0.0-alpine3.16
+    name: redis
+    volumeMounts:
+    - mountPath: /redis-master-data
+      name: data
+    - mountPath: /redis-master
+      name: config
+  volumes:
+  - emptyDir: {}
+    name: data
+  - configMap:
+      items:
+      - key: redis-config
+        path: redis.conf
+      name: dev-redis-config
+    name: config
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  labels:
+    app: mysql-nacos
+    env: dev
+  name: dev-mysql-nacos
+  namespace: springblade-dev
+spec:
+  replicas: 1
+  selector:
+    app: mysql-nacos
+    env: dev
+  template:
+    metadata:
+      labels:
+        app: mysql-nacos
+        env: dev
+    spec:
+      containers:
+      - env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: Db2@4jls2
+        - name: MYSQL_DATABASE
+          value: nacos_devtest
+        - name: MYSQL_USER
+          value: nacos
+        - name: MYSQL_PASSWORD
+          value: nacos
+        image: 192.168.2.29:8443/springblade/nacos-db:dc9065ca
+        name: mysql-nacos
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysql-persistent-storage
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: dev-mysql-nacos-pv-claim

@@ -1,0 +1,82 @@
+#--------- GitLab Agent CI/CD Tunnel configuration
+# Set KUBE_CONTEXT to use with the GitLab Kubernetes Agent's CI/CD tunnel. See
+# https://docs.gitlab.com/ee/user/clusters/agent/ci_cd_tunnel.html.
+#-----------------------------------
+# variables:
+# Set the variable through the GitLab UI, or set it here by
+# uncommenting the following two lines and replacing the Agent's path with your own:
+# variables:
+#   CI_REGISTRY_PROXY:  harbor镜像缓存地址，如：192.168.2.29:8443/proxy_cache/
+#   GITLAB_CA_CERTIFICATE: gitlab的SSL证书
+#   GITLAB_TOKEN: 当前用户的token，不建议hardcode，请到CI/CD界面上设置
+
+include:
+  - template: 'Workflows/Branch-Pipelines.gitlab-ci.yml'
+  - local: .gitlab/ci_templates/git-push.yaml
+  - local: .gitlab/ci_templates/image-update.yaml
+
+hydrate-packages:
+  tags:
+    - cluster
+  image: 
+    name: ${CI_REGISTRY_PROXY}line/kubectl-kustomize:1.24.0-4.5.5
+    entrypoint: [""]
+  script:
+  - mkdir -p new_manifests
+  #- cp packages/*.yaml new_manifests/
+  - kustomize build packages/spring-blade/dev > new_manifests/spring-blade.dev.yaml
+  # - kustomize build packages/spring-blade/test > new_manifests/spring-blade.test.yaml
+  rules:
+    - changes:
+      - packages/**/*
+  artifacts:
+    untracked: false
+    expire_in: 1 days
+    paths:
+      - new_manifests/
+
+update-packages:
+  extends: .git:push
+  needs:
+  - job: hydrate-packages
+    artifacts: true
+  variables:
+    COMMIT_MESSAGE: "Hydrated packages"
+    SKIP_CI: 0
+  script:
+  - rm -rf ${CI_COMMIT_SHA}/manifests
+  - mv new_manifests ${CI_COMMIT_SHA}/manifests
+  rules:
+    - changes:
+      - packages/**/*
+
+# The following jobs are triggered from an application project pipeline
+
+spring-blade:image:unpack:
+  tags:
+    - cluster
+  extends: [".image-update:unpack"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
+
+spring-blade:image:update:
+  tags:
+    - cluster
+  extends: [".image-update:update"]
+  variables:
+    PACKAGE_PATH: packages/spring-blade/${TARGET_ENVIRONMENT}
+  needs:
+  - job: spring-blade:image:unpack
+    artifacts: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
+
+spring-blade:image:commit:
+  tags:
+    - cluster
+  extends: [".image-update:commit"]
+  needs:
+  - job: spring-blade:image:update
+    artifacts: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
